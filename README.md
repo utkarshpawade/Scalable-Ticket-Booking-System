@@ -613,30 +613,7 @@ sequenceDiagram
 
 ---
 
-### Recommendation Generation Flow
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant FE as Next.js Frontend
-    participant GW as Nginx Gateway
-    participant RS as recommendation-service
-    participant MG as MongoDB
-
-    User->>FE: Open "For You" section
-    FE->>GW: POST /api/recommend/recommendations\n{ user_id, history: [{movie_id, rating}], top_n: 10 }
-    GW->>RS: POST /recommendations
-
-    RS->>RS: Build user genre-preference vector\nfrom history ratings
-    RS->>MG: db.movies.find({ _id: { $nin: seen } })
-    MG-->>RS: Candidate movie documents
-    RS->>RS: Compute cosine_similarity(user_vec, movie_vec)\nfor each candidate
-    RS->>RS: Sort descending; take top_n
-    RS-->>GW: "200 [{ movie_id, title, genres, score }]"
-    GW-->>FE: Response
-    FE-->>User: Render personalised carousel
-```
 
 ---
 
@@ -1622,50 +1599,7 @@ The Docker Compose setup maps cleanly to Kubernetes primitives:
 
 ---
 
-## Contributing
 
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Commit with a conventional commit message: `feat(booking): add payment retry logic`
-4. Push and open a pull request against `main`.
-5. Ensure all existing tests pass and new behaviour is covered.
-6. One approval required to merge.
-
-### Code Style
-
-- TypeScript services: ESLint + Prettier (standard config)
-- Python service: `black` + `ruff`
-- Commit messages: [Conventional Commits](https://www.conventionalcommits.org/)
-
----
-
-## License
-
-This project is licensed under the **MIT License**.
-
-```
-MIT License
-
-Copyright (c) 2024
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
 
 ---
 
