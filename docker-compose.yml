@@ -1,0 +1,131 @@
+networks:
+  tickets:
+    driver: bridge
+
+volumes:
+  pg_data:
+  mongo_data:
+  redis_data:
+  rabbit_data:
+
+services:
+  # ---------- Datastores ----------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ticket
+      POSTGRES_PASSWORD: ticketpass
+      POSTGRES_DB: bookings
+    ports: ["5432:5432"]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket -d bookings"]
+      interval: 5s
+      retries: 10
+    networks: [tickets]
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ticket
+      MONGO_INITDB_ROOT_PASSWORD: ticketpass
+      MONGO_INITDB_DATABASE: catalog
+    ports: ["27017:27017"]
+    volumes: [mongo_data:/data/db]
+    networks: [tickets]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    networks: [tickets]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ticket
+      RABBITMQ_DEFAULT_PASS: ticketpass
+    ports: ["5672:5672", "15672:15672"]
+    volumes: [rabbit_data:/var/lib/rabbitmq]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      retries: 10
+    networks: [tickets]
+
+  # ---------- Microservices ----------
+  user-service:
+    build: ./services/user-service
+    environment:
+      PORT: 4001
+      POSTGRES_URL: postgres://ticket:ticketpass@postgres:5432/bookings
+      JWT_SECRET: change-me-in-prod
+    ports: ["4001:4001"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [tickets]
+
+  catalog-service:
+    build: ./services/catalog-service
+    environment:
+      PORT: 4002
+      MONGO_URL: mongodb://ticket:ticketpass@mongo:27017/catalog?authSource=admin
+      REDIS_URL: redis://redis:6379
+    ports: ["4002:4002"]
+    depends_on: [mongo, redis]
+    networks: [tickets]
+
+  seat-service:
+    build: ./services/seat-service
+    environment:
+      PORT: 4003
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://ticket:ticketpass@rabbitmq:5672
+    ports: ["4003:4003"]
+    depends_on:
+      redis:    { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [tickets]
+
+  booking-service:
+    build: ./services/booking-service
+    environment:
+      PORT: 4004
+      POSTGRES_URL: postgres://ticket:ticketpass@postgres:5432/bookings
+      RABBITMQ_URL: amqp://ticket:ticketpass@rabbitmq:5672
+      SEAT_SERVICE_URL: http://seat-service:4003
+    ports: ["4004:4004"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [tickets]
+
+  recommendation-service:
+    build: ./services/recommendation-service
+    environment:
+      PORT: 4005
+      MONGO_URL: mongodb://ticket:ticketpass@mongo:27017/catalog?authSource=admin
+    ports: ["4005:4005"]
+    depends_on: [mongo]
+    networks: [tickets]
+
+  # ---------- Gateway ----------
+  nginx:
+    image: nginx:1.27-alpine
+    ports: ["8080:80"]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - user-service
+      - catalog-service
+      - seat-service
+      - booking-service
+      - recommendation-service
+    networks: [tickets]
