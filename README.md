@@ -11,7 +11,6 @@
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.13-FF6600?logo=rabbitmq&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-1.25-009639?logo=nginx&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 > A microservices-based movie and ticket booking platform built with Node.js, Python, Next.js, and Docker Compose. Handles concurrent seat reservations at scale through distributed Redis seat-locking, an orchestration-based Saga pattern for atomic bookings, and asynchronous message-driven workflows via RabbitMQ.
 
