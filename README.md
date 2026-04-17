@@ -633,7 +633,7 @@ sequenceDiagram
     MG-->>RS: Candidate movie documents
     RS->>RS: Compute cosine_similarity(user_vec, movie_vec)\nfor each candidate
     RS->>RS: Sort descending; take top_n
-    RS-->>GW: 200 [{ movie_id, title, genres, score }]
+    RS-->>GW: "200 [{ movie_id, title, genres, score }]"
     GW-->>FE: Response
     FE-->>User: Render personalised carousel
 ```
