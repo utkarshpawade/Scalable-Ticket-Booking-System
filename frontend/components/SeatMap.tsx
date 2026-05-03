@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { SEAT_SOCKET_URL } from '../lib/api';
 
 export type SeatState = 'AVAILABLE' | 'SELECTED' | 'LOCKED' | 'BOOKED';
 
@@ -56,9 +57,10 @@ export default function SeatMap({
 
   // ---------- Socket wiring ----------
   useEffect(() => {
-    // Connect through the NGINX gateway by default. Next.js rewrites /socket.io/*
-    // so a same-origin connection works in dev.
-    const url = socketUrl ?? (typeof window !== 'undefined' ? window.location.origin : '/');
+    // In production each service is deployed separately, so connect directly
+    // to the seat service host. In local dev, falls back to the Nginx gateway
+    // host at http://localhost:8080 which proxies /socket.io to seat-service.
+    const url = socketUrl ?? SEAT_SOCKET_URL;
 
     const socket = io(url, {
       path: '/socket.io',

@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 
@@ -11,7 +12,17 @@ from app.engine import recommend_movies
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 PORT = int(os.getenv("PORT", "4005"))
 
+# CORS — driven by CORS_ORIGINS env (comma-separated list, or "*").
+_cors_raw = os.getenv("CORS_ORIGINS", "*")
+CORS_ORIGINS = [o.strip() for o in _cors_raw.split(",")]
+
 app = FastAPI(title="Recommendation Service", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 mongo: Optional[AsyncIOMotorClient] = None
 
 

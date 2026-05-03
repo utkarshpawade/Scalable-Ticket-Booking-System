@@ -1,0 +1,110 @@
+# Render Blueprint — auto-creates all 5 backend services on free tier.
+#
+# Usage:
+#   1. Push this repo to GitHub.
+#   2. On Render, click "New +" → "Blueprint" → connect this repo.
+#   3. Render reads this file and provisions all 5 services.
+#   4. Fill in the secret env vars in each service's dashboard
+#      (Render won't auto-fill these — they come from external providers).
+#
+# Free tier notes:
+#   - "starter" plan = 750 free hours/month shared across all services
+#   - Services spin DOWN after 15 min of inactivity → ~30s cold start on first request
+#   - No persistent disk; PostgreSQL/MongoDB/Redis/RabbitMQ live on
+#     external free providers (Neon, Atlas, Upstash, CloudAMQP).
+
+services:
+  # ---------------- user-service ----------------
+  - type: web
+    name: user-service
+    runtime: docker
+    dockerfilePath: ./services/user-service/Dockerfile
+    dockerContext: ./services/user-service
+    plan: free
+    region: virginia
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 4001
+      - key: POSTGRES_URL
+        sync: false              # paste Neon connection string in dashboard
+      - key: JWT_SECRET
+        generateValue: true       # Render generates a strong random value
+      - key: CORS_ORIGINS
+        sync: false               # set to your Vercel frontend URL
+
+  # ---------------- catalog-service ----------------
+  - type: web
+    name: catalog-service
+    runtime: docker
+    dockerfilePath: ./services/catalog-service/Dockerfile
+    dockerContext: ./services/catalog-service
+    plan: free
+    region: virginia
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 4002
+      - key: MONGO_URL
+        sync: false               # paste MongoDB Atlas connection string
+      - key: REDIS_URL
+        sync: false               # paste Upstash redis:// URL
+      - key: CACHE_TTL_SEC
+        value: 60
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ---------------- seat-service ----------------
+  - type: web
+    name: seat-service
+    runtime: docker
+    dockerfilePath: ./services/seat-service/Dockerfile
+    dockerContext: ./services/seat-service
+    plan: free
+    region: virginia
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 4003
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false               # paste CloudAMQP amqps:// URL
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ---------------- booking-service ----------------
+  - type: web
+    name: booking-service
+    runtime: docker
+    dockerfilePath: ./services/booking-service/Dockerfile
+    dockerContext: ./services/booking-service
+    plan: free
+    region: virginia
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 4004
+      - key: POSTGRES_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ---------------- recommendation-service ----------------
+  - type: web
+    name: recommendation-service
+    runtime: docker
+    dockerfilePath: ./services/recommendation-service/Dockerfile
+    dockerContext: ./services/recommendation-service
+    plan: free
+    region: virginia
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 4005
+      - key: MONGO_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

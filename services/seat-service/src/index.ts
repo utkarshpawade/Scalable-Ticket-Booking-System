@@ -13,12 +13,28 @@ async function main() {
   const app = express();
   app.use(express.json());
 
+  // CORS — same env-driven policy applied to HTTP routes and Socket.io.
+  const allowed = (process.env.CORS_ORIGINS ?? '*').split(',').map((s) => s.trim());
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (allowed.includes('*')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    } else if (origin && allowed.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+
   const redis = new Redis(REDIS_URL);
   const seatLock = new SeatLockService(redis);
 
   const server = http.createServer(app);
   const io = new IOServer(server, {
-    cors: { origin: '*' },
+    cors: { origin: allowed.includes('*') ? '*' : allowed },
     path: '/socket.io',
   });
 

@@ -12,6 +12,22 @@ async function main() {
   const app = express();
   app.use(express.json());
 
+  // CORS — driven by CORS_ORIGINS env (comma-separated list, or "*").
+  const allowed = (process.env.CORS_ORIGINS ?? '*').split(',').map((s) => s.trim());
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (allowed.includes('*')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    } else if (origin && allowed.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+
   await mongoose.connect(MONGO_URL);
   mongoose.connection.on('error', (e) => console.error('[mongo]', e));
 
