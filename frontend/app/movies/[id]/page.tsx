@@ -5,6 +5,7 @@ import Link from 'next/link';
 import SeatMap, { type Seat } from '@/components/SeatMap';
 import CheckoutPanel from '@/components/CheckoutPanel';
 import { getMovie, type Movie } from '@/lib/api';
+import { findMockMovie } from '@/lib/mockData';
 
 interface MovieDetail {
   movie: Movie;
@@ -18,24 +19,28 @@ interface MovieDetail {
 }
 
 // Fallback used when catalog service is unreachable.
-const mockDetail = (id: string): MovieDetail => ({
-  movie: {
-    _id: id,
-    title: 'Quantum Drift',
-    genres: ['Sci-Fi', 'Action'],
-    durationMin: 142,
-    rating: 8.4,
-    posterUrl: 'https://picsum.photos/seed/quantum/600/900',
-    description:
-      'When a deep-space navigator discovers a tear in the fabric of time, she must race across colliding timelines to save her crew — and herself.',
-    releaseDate: new Date().toISOString(),
-  },
-  showtimes: [
-    { _id: 'showtime-demo-1', startsAt: new Date(Date.now() + 3 * 3600_000).toISOString(), format: 'IMAX', language: 'English', basePrice: 350 },
-    { _id: 'showtime-demo-2', startsAt: new Date(Date.now() + 6 * 3600_000).toISOString(), format: '2D',   language: 'English', basePrice: 250 },
-    { _id: 'showtime-demo-3', startsAt: new Date(Date.now() + 9 * 3600_000).toISOString(), format: '3D',   language: 'English', basePrice: 320 },
-  ],
-});
+const mockDetail = (id: string): MovieDetail => {
+  const movie =
+    findMockMovie(id) ?? {
+      _id: id,
+      title: 'Quantum Drift',
+      genres: ['Sci-Fi', 'Action'],
+      durationMin: 142,
+      rating: 8.4,
+      posterUrl: 'https://picsum.photos/seed/quantum/600/900',
+      description:
+        'When a deep-space navigator discovers a tear in the fabric of time, she must race across colliding timelines to save her crew — and herself.',
+      releaseDate: new Date().toISOString(),
+    };
+  return {
+    movie,
+    showtimes: [
+      { _id: `showtime-${id}-1`, startsAt: new Date(Date.now() + 3 * 3600_000).toISOString(), format: 'IMAX', language: 'English', basePrice: 350 },
+      { _id: `showtime-${id}-2`, startsAt: new Date(Date.now() + 6 * 3600_000).toISOString(), format: '2D',   language: 'English', basePrice: 250 },
+      { _id: `showtime-${id}-3`, startsAt: new Date(Date.now() + 9 * 3600_000).toISOString(), format: '3D',   language: 'English', basePrice: 320 },
+    ],
+  };
+};
 
 export default function MovieDetailPage({ params }: { params: { id: string } }) {
   const [detail, setDetail] = useState<MovieDetail | null>(null);
@@ -53,7 +58,7 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
         if (cancelled) return;
         if (!data?.movie) throw new Error('empty');
         setDetail(data);
-        setActiveShowtimeId(data.showtimes?.[0]?._id ?? 'showtime-demo-1');
+        setActiveShowtimeId(data.showtimes?.[0]?._id ?? `showtime-${params.id}-1`);
         setFromMock(false);
       } catch {
         if (cancelled) return;
@@ -93,9 +98,8 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
       </nav>
 
       {fromMock && (
-        <div className="rounded-md border border-amber-600/40 bg-amber-950/30 px-4 py-2 text-sm text-amber-200">
-          Showing demo data — catalog service unreachable. Seat selection below
-          is still fully functional against the live seat service.
+        <div className="rounded-md border border-slate-700/40 bg-slate-800/30 px-4 py-2 text-xs text-slate-400">
+          🎭 Demo mode — showing sample movie data. Booking flow below works end-to-end.
         </div>
       )}
 
@@ -183,7 +187,9 @@ export default function MovieDetailPage({ params }: { params: { id: string } }) 
         />
         <CheckoutPanel
           showtimeId={activeShowtimeId}
+          movieId={movie._id}
           movieTitle={movie.title}
+          posterUrl={movie.posterUrl}
           selectedSeats={selectedSeats}
         />
       </section>

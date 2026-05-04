@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import NavAuth from '@/components/NavAuth';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -46,14 +47,7 @@ export default function RootLayout({
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="hidden rounded-lg border border-slate-700/70 bg-slate-900/50 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 sm:block">
-                Sign In
-              </button>
-              <button className="relative rounded-lg bg-gradient-to-r from-brand-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:shadow-brand-500/50 hover:brightness-110">
-                Get Started
-              </button>
-            </div>
+            <NavAuth />
           </nav>
         </header>
 

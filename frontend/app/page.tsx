@@ -1,22 +1,6 @@
 import MovieCard from '@/components/MovieCard';
 import { getMovies, type Movie } from '@/lib/api';
-
-const MOCK_MOVIES: Movie[] = [
-  { _id: 'mock-1', title: 'Quantum Drift',     genres: ['Sci-Fi', 'Action'],   durationMin: 142, rating: 8.4, posterUrl: 'https://picsum.photos/seed/quantum/400/600' },
-  { _id: 'mock-2', title: 'The Last Harbor',   genres: ['Drama', 'Thriller'],  durationMin: 118, rating: 7.9, posterUrl: 'https://picsum.photos/seed/harbor/400/600' },
-  { _id: 'mock-3', title: 'Echoes of Tomorrow',genres: ['Sci-Fi', 'Mystery'],  durationMin: 135, rating: 8.1, posterUrl: 'https://picsum.photos/seed/echoes/400/600' },
-  { _id: 'mock-4', title: 'Midnight Paris',    genres: ['Romance', 'Comedy'],  durationMin: 108, rating: 7.2, posterUrl: 'https://picsum.photos/seed/paris/400/600' },
-  { _id: 'mock-5', title: 'Iron Verdict',      genres: ['Action', 'Crime'],    durationMin: 126, rating: 7.6, posterUrl: 'https://picsum.photos/seed/verdict/400/600' },
-  { _id: 'mock-6', title: 'Nebula Run',        genres: ['Animation','Family'], durationMin:  95, rating: 8.0, posterUrl: 'https://picsum.photos/seed/nebula/400/600' },
-  { _id: 'mock-7', title: 'Silent Protocol',   genres: ['Thriller', 'Spy'],    durationMin: 132, rating: 7.8, posterUrl: 'https://picsum.photos/seed/protocol/400/600' },
-  { _id: 'mock-8', title: 'Golden Hour',       genres: ['Drama'],              durationMin: 112, rating: 7.4, posterUrl: 'https://picsum.photos/seed/golden/400/600' },
-  { _id: 'mock-9', title: 'Velvet Skies',      genres: ['Romance','Drama'],    durationMin: 121, rating: 7.5, posterUrl: 'https://picsum.photos/seed/velvet/400/600' },
-  { _id: 'mock-10',title: 'Chrome Dynasty',    genres: ['Action','Sci-Fi'],    durationMin: 148, rating: 8.2, posterUrl: 'https://picsum.photos/seed/chrome/400/600' },
-  { _id: 'mock-11',title: 'Hollow Stars',      genres: ['Horror','Thriller'],  durationMin: 101, rating: 7.0, posterUrl: 'https://picsum.photos/seed/hollow/400/600' },
-  { _id: 'mock-12',title: 'The Lighthouse',    genres: ['Mystery','Drama'],    durationMin: 129, rating: 8.3, posterUrl: 'https://picsum.photos/seed/lighthouse/400/600' },
-];
-
-const GENRES = ['All', 'Action', 'Sci-Fi', 'Drama', 'Thriller', 'Romance', 'Comedy', 'Horror', 'Animation'];
+import { MOCK_MOVIES, GENRES } from '@/lib/mockData';
 
 async function fetchMoviesSafe(): Promise<{ items: Movie[]; fromMock: boolean }> {
   try {
@@ -136,10 +120,10 @@ export default async function HomePage() {
       </section>
 
       {fromMock && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-200 backdrop-blur">
-          <span>⚠️</span>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-2.5 text-xs text-slate-400 backdrop-blur">
+          <span>🎭</span>
           <span>
-            Showing demo data — catalog service is unreachable or empty. Seed MongoDB to see live titles.
+            Demo mode — showing sample catalog. Boot the catalog service to see live titles.
           </span>
         </div>
       )}
