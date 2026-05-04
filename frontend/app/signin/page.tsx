@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { setUser } from '@/lib/localStore';
+import { setUser, setAuthToken } from '@/lib/localStore';
+import { signIn } from '@/lib/api';
 
 function SignInForm() {
   const router = useRouter();
@@ -29,17 +30,15 @@ function SignInForm() {
     }
 
     setLoading(true);
-    // Demo auth: accept any non-empty credentials and persist locally.
-    // Real backend integration would call POST /users/login here.
-    setTimeout(() => {
-      const name = email.split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim() || 'Friend';
-      setUser({
-        userId: 'user_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        email,
-      });
+    try {
+      const { token, user } = await signIn({ email, password });
+      setAuthToken(token);
+      setUser({ userId: user.userId, name: user.name, email: user.email });
       router.push(next);
-    }, 400);
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? 'Sign in failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (

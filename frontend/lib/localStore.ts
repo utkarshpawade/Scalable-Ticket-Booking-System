@@ -21,7 +21,14 @@ export interface LocalBooking {
 }
 
 const USER_KEY = 'cinebook:user';
+const TOKEN_KEY = 'auth_token';
 const BOOKINGS_KEY = 'cinebook:bookings';
+
+export function setAuthToken(token: string | null) {
+  if (!isBrowser()) return;
+  if (token) window.localStorage.setItem(TOKEN_KEY, token);
+  else window.localStorage.removeItem(TOKEN_KEY);
+}
 
 function isBrowser() {
   return typeof window !== 'undefined';
@@ -39,8 +46,12 @@ export function getUser(): AuthUser | null {
 
 export function setUser(u: AuthUser | null) {
   if (!isBrowser()) return;
-  if (u) window.localStorage.setItem(USER_KEY, JSON.stringify(u));
-  else window.localStorage.removeItem(USER_KEY);
+  if (u) {
+    window.localStorage.setItem(USER_KEY, JSON.stringify(u));
+  } else {
+    window.localStorage.removeItem(USER_KEY);
+    window.localStorage.removeItem(TOKEN_KEY);
+  }
   window.dispatchEvent(new Event('cinebook:auth'));
 }
 

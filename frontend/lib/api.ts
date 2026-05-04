@@ -124,6 +124,28 @@ export async function bookTicket(
   return res.data;
 }
 
+export interface AuthResponse {
+  token: string;
+  user: { userId: string; name: string; email: string; role?: string };
+}
+
+export async function signUp(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const res = await userClient.post('/signup', input);
+  return res.data;
+}
+
+export async function signIn(input: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const res = await userClient.post('/login', input);
+  return res.data;
+}
+
 export async function getMe(): Promise<{
   userId: string;
   name: string;

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { setUser } from '@/lib/localStore';
+import { setUser, setAuthToken } from '@/lib/localStore';
+import { signUp } from '@/lib/api';
 
 function SignUpForm() {
   const router = useRouter();
@@ -34,14 +35,15 @@ function SignUpForm() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setUser({
-        userId: 'user_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-        name: name.trim(),
-        email,
-      });
+    try {
+      const { token, user } = await signUp({ name: name.trim(), email, password });
+      setAuthToken(token);
+      setUser({ userId: user.userId, name: user.name, email: user.email });
       router.push(next);
-    }, 500);
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? 'Sign up failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
