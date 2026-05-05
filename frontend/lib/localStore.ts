@@ -24,6 +24,9 @@ const USER_KEY = 'cinebook:user';
 const TOKEN_KEY = 'auth_token';
 const BOOKINGS_KEY = 'cinebook:bookings';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function setAuthToken(token: string | null) {
   if (!isBrowser()) return;
   if (token) window.localStorage.setItem(TOKEN_KEY, token);
@@ -38,7 +41,18 @@ export function getUser(): AuthUser | null {
   if (!isBrowser()) return null;
   try {
     const raw = window.localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
+    if (!raw) return null;
+    const u = JSON.parse(raw) as AuthUser;
+    // Stale pre-migration cache used a synthetic id like
+    // "user_<email>"; the backend now requires a UUID. Treat
+    // anything non-UUID as signed-out so the user is forced
+    // through the real /login flow.
+    if (!u?.userId || !UUID_RE.test(u.userId)) {
+      window.localStorage.removeItem(USER_KEY);
+      window.localStorage.removeItem(TOKEN_KEY);
+      return null;
+    }
+    return u;
   } catch {
     return null;
   }
