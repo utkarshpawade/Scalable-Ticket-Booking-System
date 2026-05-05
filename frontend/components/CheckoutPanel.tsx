@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { bookTicket } from '@/lib/api';
 import {
   getUser,
-  newBookingId,
   saveBooking,
   type AuthUser,
 } from '@/lib/localStore';
@@ -67,10 +66,8 @@ export default function CheckoutPanel({
 
     const seatIds = selectedSeats.map((s) => s.id).sort();
     const idempotencyKey = `${user.userId}:${showtimeId}:${seatIds.join(',')}:${Date.now()}`;
-    const localId = newBookingId();
 
-    let bookingId = localId;
-
+    let bookingId: string;
     try {
       const res = await bookTicket({
         userId: user.userId,
@@ -79,24 +76,16 @@ export default function CheckoutPanel({
         amount: total,
         idempotencyKey,
       });
-      if (res?.bookingId) bookingId = res.bookingId;
+      bookingId = res.bookingId;
     } catch (err: any) {
-      // Backend offline / saga failed — keep going with the local booking so the
-      // demo flow still completes. The seat-service lock (if any) will time out
-      // server-side; the user gets a clear "demo mode" notice on the receipt.
-      const status = err?.response?.status;
-      if (status && status >= 400 && status < 500) {
-        // Genuine validation error from the booking service — surface it.
-        setToast({
-          kind: 'error',
-          message:
-            err?.response?.data?.error ??
-            'Booking failed — your seats have been released.',
-        });
-        setSubmitting(false);
-        return;
-      }
-      // Network / 5xx — fall through to local booking.
+      setToast({
+        kind: 'error',
+        message:
+          err?.response?.data?.error ??
+          'Could not lock seats — please try again.',
+      });
+      setSubmitting(false);
+      return;
     }
 
     saveBooking({

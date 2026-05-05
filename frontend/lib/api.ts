@@ -119,8 +119,16 @@ export async function getPopular(limit = 10): Promise<RecommendedMovie[]> {
 
 export async function bookTicket(
   payload: BookingPayload,
-): Promise<{ bookingId: string }> {
+): Promise<{ bookingId: string; lockToken: string; expiresAt: number }> {
   const res = await bookingClient.post('/bookings', payload);
+  return res.data;
+}
+
+export async function confirmBooking(
+  bookingId: string,
+  userId: string,
+): Promise<{ bookingId: string; status: 'CONFIRMED' }> {
+  const res = await bookingClient.post(`/bookings/${bookingId}/confirm`, { userId });
   return res.data;
 }
 

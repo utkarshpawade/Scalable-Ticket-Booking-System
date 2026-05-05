@@ -12,10 +12,20 @@ interface BookingCmd {
   idempotencyKey: string;
 }
 
+export interface BookingStartResult {
+  bookingId: string;
+  lockToken: string;
+  expiresAt: number;
+}
+
 /**
  * Orchestration-based Saga. Each forward step has a paired compensation.
  * State persisted on every transition so a crashed orchestrator can be
  * resumed by the recovery worker.
+ *
+ * Two-phase: `start()` locks seats and returns a PENDING booking; the
+ * caller (frontend after simulated payment) drives `confirm()` to commit
+ * the seats from `seat:lock:*` to `seat:sold:*`. Lock TTL bounds abandonment.
  */
 export class BookingSaga {
   constructor(
@@ -23,7 +33,7 @@ export class BookingSaga {
     private readonly mq: Channel,
   ) {}
 
-  async execute(cmd: BookingCmd): Promise<{ bookingId: string }> {
+  async start(cmd: BookingCmd): Promise<BookingStartResult> {
     const bookingId = await this.createPending(cmd);
     await this.recordStep(bookingId, 'CREATE');
 
@@ -33,17 +43,48 @@ export class BookingSaga {
       await this.persistLock(bookingId, lock.lockToken!);
       await this.recordStep(bookingId, 'LOCK');
 
-      const pay = await this.requestPayment(bookingId, cmd.amount);
-      if (!pay.success) throw new SagaError(pay.reason ?? 'PAYMENT_FAILED', 'PAY');
-      await this.recordStep(bookingId, 'PAY');
-
-      await this.confirmBooking(bookingId, pay.paymentRef!);
-      await this.emit('booking.confirmed', { bookingId, ...cmd });
-      return { bookingId };
+      return {
+        bookingId,
+        lockToken: lock.lockToken!,
+        expiresAt: lock.expiresAt ?? Date.now() + 10 * 60 * 1000,
+      };
     } catch (err) {
       await this.compensate(bookingId, err as SagaError);
       throw err;
     }
+  }
+
+  async confirm(bookingId: string, userId: string): Promise<void> {
+    const booking = await this.loadBooking(bookingId);
+    if (!booking) throw new SagaError('NOT_FOUND', 'CONFIRM');
+    if (booking.user_id !== userId) throw new SagaError('FORBIDDEN', 'CONFIRM');
+    if (booking.status === 'CONFIRMED') return;
+    if (booking.status !== 'SEATS_LOCKED') {
+      throw new SagaError(`CANNOT_CONFIRM_FROM_${booking.status}`, 'CONFIRM');
+    }
+
+    // Commit is fire-and-forget on the bus; seat-service flips lock→sold and
+    // broadcasts SOLD to all socket clients in the showtime room.
+    await this.emit('seat.commit.requested', {
+      bookingId,
+      showtimeId: booking.showtime_id,
+      seatIds: booking.seat_ids,
+      lockToken: booking.lock_token,
+    });
+
+    await this.db.query(
+      `UPDATE bookings
+         SET status='CONFIRMED', updated_at=NOW()
+         WHERE id=$1 AND status='SEATS_LOCKED'`,
+      [bookingId],
+    );
+    await this.recordStep(bookingId, 'CONFIRM');
+    await this.emit('booking.confirmed', {
+      bookingId,
+      userId: booking.user_id,
+      showtimeId: booking.showtime_id,
+      seatIds: booking.seat_ids,
+    });
   }
 
   private async compensate(bookingId: string, err: SagaError) {
@@ -90,7 +131,7 @@ export class BookingSaga {
   }
 
   private async requestSeatLock(bookingId: string, cmd: BookingCmd) {
-    return this.rpc<{ success: boolean; lockToken?: string }>(
+    return this.rpc<{ success: boolean; lockToken?: string; expiresAt?: number }>(
       'seat.lock.requested',
       {
         bookingId,
@@ -102,24 +143,6 @@ export class BookingSaga {
       'seat.lock.succeeded',
       'seat.lock.failed',
       5_000,
-    );
-  }
-
-  private async requestPayment(bookingId: string, amount: number) {
-    return this.rpc<{ success: boolean; paymentRef?: string; reason?: string }>(
-      'payment.requested',
-      { bookingId, amount, currency: 'USD' },
-      'payment.succeeded',
-      'payment.failed',
-      15_000,
-    );
-  }
-
-  private async confirmBooking(bookingId: string, paymentRef: string) {
-    await this.db.query(
-      `UPDATE bookings SET status='CONFIRMED', payment_ref=$2, updated_at=NOW()
-       WHERE id=$1 AND status IN ('SEATS_LOCKED','PAYMENT_PROCESSING')`,
-      [bookingId, paymentRef],
     );
   }
 
@@ -165,8 +188,8 @@ export class BookingSaga {
     return this.mq.publish(
       'booking.events',
       routingKey,
-      Buffer.from(JSON.stringify({ occurredAt: Date.now(), payload })),
-      { persistent: true },
+      Buffer.from(JSON.stringify(payload)),
+      { persistent: true, timestamp: Date.now() },
     );
   }
 

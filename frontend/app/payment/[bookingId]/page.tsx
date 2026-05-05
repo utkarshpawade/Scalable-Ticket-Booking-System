@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   getBooking,
+  getUser,
   updateBooking,
   type LocalBooking,
 } from '@/lib/localStore';
+import { confirmBooking } from '@/lib/api';
 
 type Method = 'card' | 'upi' | 'netbanking';
 
@@ -111,6 +113,23 @@ export default function PaymentPage({ params }: { params: { bookingId: string } 
     setProcessing(true);
     // Simulated payment gateway round-trip.
     await new Promise((r) => setTimeout(r, 1400));
+
+    // Tell the backend to commit seats (lock → sold). This is what makes the
+    // seats appear BOOKED to other users on this showtime.
+    const user = getUser();
+    if (user) {
+      try {
+        await confirmBooking(booking.bookingId, user.userId);
+      } catch (err: any) {
+        setProcessing(false);
+        setError(
+          err?.response?.data?.error ??
+          'Could not confirm booking. Your seat lock may have expired.',
+        );
+        return;
+      }
+    }
+
     updateBooking(booking.bookingId, {
       status: 'CONFIRMED',
       paidAt: new Date().toISOString(),

@@ -155,12 +155,14 @@ export default function SeatMap({
   }, [selected, seats, onSelectionChange]);
 
   // ---------- Click handler ----------
+  // Selection is purely client-side. The authoritative lock happens in the
+  // booking saga at "Proceed to Payment" — at which point all clients in the
+  // showtime room receive a LOCKED broadcast.
   const toggleSeat = useCallback(
     (seat: Seat) => {
       const s = statusMap[seat.id];
       if (s === 'LOCKED' || s === 'BOOKED') return;
 
-      const socket = socketRef.current;
       const isSelected = selected.has(seat.id);
 
       setSelected((prev) => {
@@ -170,23 +172,14 @@ export default function SeatMap({
         return next;
       });
 
-      // Optimistic local state; server broadcast is the source of truth.
       setStatusMap((prev) => {
         const next = { ...prev };
         if (isSelected) delete next[seat.id];
         else next[seat.id] = 'SELECTED';
         return next;
       });
-
-      if (!socket) return;
-      socket.emit(isSelected ? 'release_seat' : 'lock_seat', {
-        showtimeId,
-        movieId,
-        seatIds: [seat.id],
-        userId,
-      });
     },
-    [movieId, showtimeId, userId, selected, statusMap],
+    [selected, statusMap],
   );
 
   // ---------- Render ----------

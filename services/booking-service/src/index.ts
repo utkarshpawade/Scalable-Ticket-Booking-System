@@ -45,13 +45,28 @@ async function main() {
       if (!userId || !showtimeId || !Array.isArray(seatIds) || !idempotencyKey) {
         return res.status(400).json({ error: 'invalid payload' });
       }
-      const result = await saga.execute({
+      const result = await saga.start({
         userId, showtimeId, seatIds, amount, idempotencyKey,
       });
       res.status(201).json(result);
     } catch (err: any) {
       console.error('[booking-service] saga failed', err);
       res.status(409).json({ error: err.message ?? 'booking failed' });
+    }
+  });
+
+  app.post('/bookings/:id/confirm', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: 'userId required' });
+      await saga.confirm(req.params.id, userId);
+      res.json({ bookingId: req.params.id, status: 'CONFIRMED' });
+    } catch (err: any) {
+      console.error('[booking-service] confirm failed', err);
+      const code = err.message === 'NOT_FOUND' ? 404
+                 : err.message === 'FORBIDDEN' ? 403
+                 : 409;
+      res.status(code).json({ error: err.message ?? 'confirm failed' });
     }
   });
 
