@@ -203,6 +203,10 @@ export class BookingSaga {
     return new Promise(async (resolve, reject) => {
       const correlationId = randomUUID();
       const { queue } = await this.mq.assertQueue('', { exclusive: true });
+      // Topic exchange drops messages whose routing key matches no binding,
+      // so the reply queue must be bound to both success and fail keys.
+      await this.mq.bindQueue(queue, 'booking.events', successKey);
+      await this.mq.bindQueue(queue, 'booking.events', failKey);
       const timer = setTimeout(() => reject(new SagaError('TIMEOUT', 'RPC')), timeoutMs);
 
       await this.mq.consume(
