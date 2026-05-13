@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import MovieCard from '@/components/MovieCard';
+import { Divider, Mono, Poster, Tag } from '@/components/ui';
 import { getMovies, type Movie } from '@/lib/api';
-import { MOCK_MOVIES, GENRES } from '@/lib/mockData';
+import { MOCK_MOVIES } from '@/lib/mockData';
 
 async function fetchMoviesSafe(): Promise<{ items: Movie[]; fromMock: boolean }> {
   try {
@@ -17,206 +19,254 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   const { items, fromMock } = await fetchMoviesSafe();
   const featured = items[0];
-  const trending = items.slice(1, 6);
-  const rest = items;
+  const trending = items.slice(1, 5);
+  const all = items;
 
   return (
-    <div className="space-y-20">
-      {/* ---------- Hero ---------- */}
-      <section className="relative overflow-hidden rounded-3xl">
-        {/* Background image */}
-        <div className="absolute inset-0">
-          {featured?.posterUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={featured.posterUrl}
-              alt=""
-              aria-hidden
-              className="h-full w-full object-cover opacity-30 blur-sm"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-950/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/40" />
-        </div>
-
-        {/* Animated blobs */}
-        <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-brand-500/30 blur-3xl animate-float" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-purple-500/20 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-
-        <div className="relative grid gap-10 px-8 py-16 md:grid-cols-[1.2fr_1fr] md:px-14 md:py-20">
-          <div className="fade-up max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-xs font-medium text-brand-200 backdrop-blur">
-              <span className="relative flex h-2 w-2">
-                <span className="pulse-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-              </span>
-              Now Booking · Live Seats
-            </span>
-
-            <h1 className="mt-5 font-display text-5xl font-bold leading-[1.05] text-white md:text-6xl">
-              Your next favorite<br />
-              film, <span className="gradient-text">one tap away.</span>
-            </h1>
-
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 md:text-lg">
-              Pick your perfect seat, watch it lock instantly for everyone else,
-              and pay with confidence. Powered by a distributed saga and
-              Redis Redlock — so you never get double-booked.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#movies"
-                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:shadow-brand-500/60 hover:brightness-110"
+    <div className="space-y-12">
+      {/* ---------- Editorial hero ---------- */}
+      <section
+        className="relative overflow-hidden rounded-sharp"
+        style={{ border: '1px solid var(--line)' }}
+      >
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+            minHeight: 480,
+          }}
+        >
+          <div className="flex flex-col justify-between p-10">
+            <div className="flex items-center justify-between">
+              <Mono
+                className="text-[10px] uppercase tracking-[0.3em]"
+                style={{ color: 'var(--fg-faint)' }}
               >
-                Browse Movies
-                <span className="transition group-hover:translate-x-1">→</span>
-              </a>
-              <a
-                href="/bookings"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 backdrop-blur transition hover:border-white/30 hover:bg-white/10"
+                Feature presentation · Vol. 47
+              </Mono>
+              <Mono
+                className="text-[10px] uppercase tracking-[0.3em]"
+                style={{ color: 'var(--accent)' }}
               >
-                My Bookings
-              </a>
+                Now booking
+              </Mono>
             </div>
 
-            {/* Stats */}
-            <div className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-white/10 pt-6">
-              {[
-                { v: '2.4M+', l: 'Tickets booked' },
-                { v: '1,200', l: 'Theaters' },
-                { v: '0',     l: 'Double-bookings' },
-              ].map((s) => (
-                <div key={s.l}>
-                  <div className="font-display text-2xl font-bold text-white">{s.v}</div>
-                  <div className="text-xs uppercase tracking-wider text-slate-400">{s.l}</div>
+            <div>
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {(featured?.genres ?? []).slice(0, 2).map((g) => (
+                  <Tag key={g}>{g}</Tag>
+                ))}
+                <Tag accent>IMAX</Tag>
+              </div>
+              <h1
+                className="mb-4 font-display italic font-bold"
+                style={{
+                  fontSize: 'clamp(48px, 6vw, 88px)',
+                  lineHeight: 0.95,
+                  letterSpacing: '-0.02em',
+                  color: 'var(--fg)',
+                }}
+              >
+                {featured?.title ?? 'Now showing'}
+              </h1>
+              <p
+                style={{
+                  fontSize: 17,
+                  lineHeight: 1.5,
+                  color: 'var(--fg-soft)',
+                  maxWidth: '52ch',
+                }}
+              >
+                {featured?.description ??
+                  'Pick your perfect seat, watch it lock instantly for everyone else, and pay with confidence — powered by a distributed saga and Redis Redlock.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div className="flex flex-wrap gap-8">
+                <div>
+                  <Mono
+                    className="text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--fg-faint)' }}
+                  >
+                    Runtime
+                  </Mono>
+                  <Mono
+                    className="mt-1 block text-sm"
+                    style={{ color: 'var(--fg)' }}
+                  >
+                    {featured?.durationMin
+                      ? `${Math.floor(featured.durationMin / 60)}h ${featured.durationMin % 60}m`
+                      : '—'}
+                  </Mono>
                 </div>
-              ))}
+                <div>
+                  <Mono
+                    className="text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--fg-faint)' }}
+                  >
+                    Rating
+                  </Mono>
+                  <Mono
+                    className="mt-1 block text-sm"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    ★ {featured?.rating?.toFixed(1) ?? '—'}
+                  </Mono>
+                </div>
+                <div>
+                  <Mono
+                    className="text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--fg-faint)' }}
+                  >
+                    Genres
+                  </Mono>
+                  <Mono
+                    className="mt-1 block text-sm"
+                    style={{ color: 'var(--fg)' }}
+                  >
+                    {(featured?.genres ?? []).slice(0, 2).join(' · ') || '—'}
+                  </Mono>
+                </div>
+              </div>
+              {featured && (
+                <Link
+                  href={`/movies/${featured._id}`}
+                  className="rounded-sharp px-7 py-3.5 font-mono text-xs font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-90"
+                  style={{ background: 'var(--accent)', color: 'var(--bg)' }}
+                >
+                  Reserve seats →
+                </Link>
+              )}
             </div>
           </div>
 
-          {/* Featured poster */}
           {featured && (
-            <div className="fade-up hidden md:block" style={{ animationDelay: '0.15s' }}>
-              <div className="relative mx-auto max-w-xs">
-                <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-brand-500/30 via-purple-500/20 to-pink-500/30 blur-2xl" />
-                <div className="relative overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-brand-500/20 animate-float">
-                  {featured.posterUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={featured.posterUrl} alt={featured.title} className="h-full w-full object-cover" />
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5">
-                    <div className="text-xs uppercase tracking-widest text-brand-300">Featured</div>
-                    <div className="mt-1 font-display text-xl font-bold text-white">{featured.title}</div>
-                    <div className="mt-0.5 text-xs text-slate-300">
-                      {(featured.genres ?? []).slice(0, 2).join(' · ')}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="relative hidden md:block">
+              <Poster
+                movie={{
+                  id: featured._id,
+                  title: featured.title,
+                  genres: featured.genres ?? [],
+                  posterUrl: featured.posterUrl,
+                }}
+                className="absolute inset-0"
+                big
+              />
             </div>
           )}
         </div>
       </section>
 
       {fromMock && (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-2.5 text-xs text-slate-400 backdrop-blur">
-          <span>🎭</span>
-          <span>
-            Demo mode — showing sample catalog. Boot the catalog service to see live titles.
-          </span>
+        <div
+          className="rounded-sharp px-4 py-2.5 font-mono text-[11px] tracking-[0.05em]"
+          style={{
+            border: '1px solid var(--line)',
+            color: 'var(--fg-faint)',
+            background: 'var(--bg-soft)',
+          }}
+        >
+          Demo mode — showing sample catalog. Boot the catalog service to see live titles.
         </div>
       )}
 
-      {/* ---------- Genre pills ---------- */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-2 text-xs uppercase tracking-widest text-slate-400">Browse by genre</span>
-          {GENRES.map((g, i) => (
-            <button
-              key={g}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                i === 0
-                  ? 'bg-gradient-to-r from-brand-600 to-purple-600 text-white shadow-lg shadow-brand-500/25'
-                  : 'border border-white/10 bg-white/5 text-slate-300 hover:border-white/30 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------- Trending strip ---------- */}
+      {/* ---------- Trending ---------- */}
       {trending.length > 0 && (
         <section className="space-y-5">
           <div className="flex items-baseline justify-between">
-            <div>
-              <h2 className="font-display text-2xl font-bold text-white md:text-3xl">🔥 Trending this week</h2>
-              <p className="mt-1 text-sm text-slate-400">The films everyone's booking right now.</p>
-            </div>
+            <h2
+              className="font-display italic font-semibold"
+              style={{ fontSize: 32, color: 'var(--fg)' }}
+            >
+              Trending this week
+            </h2>
+            <Mono
+              className="hidden text-[10px] uppercase tracking-[0.3em] sm:inline"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              By bookings · last 7 days
+            </Mono>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
             {trending.map((m, i) => (
-              <div key={m._id} className="fade-up" style={{ animationDelay: `${i * 70}ms` }}>
-                <MovieCard
-                  id={m._id}
-                  title={m.title}
-                  genres={m.genres ?? []}
-                  rating={m.rating}
-                  durationMin={m.durationMin}
-                  posterUrl={m.posterUrl}
-                />
-              </div>
+              <Link
+                key={m._id}
+                href={`/movies/${m._id}`}
+                className="group block text-left"
+              >
+                <div
+                  className="relative overflow-hidden rounded-sharp"
+                  style={{ aspectRatio: '2/3' }}
+                >
+                  <Poster
+                    movie={{
+                      id: m._id,
+                      title: m.title,
+                      genres: m.genres ?? [],
+                      posterUrl: m.posterUrl,
+                    }}
+                    className="absolute inset-0"
+                  />
+                  <div
+                    className="absolute left-3 top-3 font-display italic font-bold"
+                    style={{
+                      fontSize: 40,
+                      lineHeight: 0.8,
+                      color: 'var(--accent)',
+                      opacity: 0.9,
+                    }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </div>
+                </div>
+                <div className="mt-3 flex items-baseline justify-between gap-2">
+                  <div
+                    className="truncate font-display italic font-semibold"
+                    style={{ fontSize: 18, color: 'var(--fg)' }}
+                  >
+                    {m.title}
+                  </div>
+                  {typeof m.rating === 'number' && (
+                    <Mono
+                      className="shrink-0 text-xs"
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      ★ {m.rating.toFixed(1)}
+                    </Mono>
+                  )}
+                </div>
+                <Mono
+                  className="mt-1 block text-[10px] uppercase tracking-[0.15em]"
+                  style={{ color: 'var(--fg-faint)' }}
+                >
+                  {(m.genres ?? []).slice(0, 2).join(' · ')}
+                  {m.durationMin
+                    ? ` · ${Math.floor(m.durationMin / 60)}h${m.durationMin % 60}m`
+                    : ''}
+                </Mono>
+              </Link>
             ))}
           </div>
         </section>
       )}
 
+      <Divider label="Now showing" />
+
       {/* ---------- Full grid ---------- */}
-      <section id="movies" className="space-y-5">
-        <div className="flex items-baseline justify-between">
-          <div>
-            <h2 className="font-display text-2xl font-bold text-white md:text-3xl">🎬 Now Showing</h2>
-            <p className="mt-1 text-sm text-slate-400">Pick a film and grab your seats.</p>
-          </div>
-          <a href="#" className="text-sm font-medium text-brand-400 hover:text-brand-300">
-            View all →
-          </a>
-        </div>
-
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {rest.map((m, i) => (
-            <div key={m._id} className="fade-up" style={{ animationDelay: `${Math.min(i * 40, 400)}ms` }}>
-              <MovieCard
-                id={m._id}
-                title={m.title}
-                genres={m.genres ?? []}
-                rating={m.rating}
-                durationMin={m.durationMin}
-                posterUrl={m.posterUrl}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------- Feature band ---------- */}
-      <section className="grid gap-5 md:grid-cols-3">
-        {[
-          { icon: '⚡', title: 'Real-time seats',      desc: 'Watch seats lock live across every device. No stale grids, ever.' },
-          { icon: '🔒', title: 'No double-bookings',    desc: 'Redlock + Saga orchestration guarantees exactly one winner per seat.' },
-          { icon: '💳', title: 'Safe rollbacks',        desc: 'If payment fails, your lock is auto-released. No ghost holds.' },
-        ].map((f) => (
-          <div
-            key={f.title}
-            className="glass group rounded-2xl p-6 transition hover:-translate-y-1 hover:border-white/20"
-          >
-            <div className="mb-3 text-3xl transition group-hover:scale-110">{f.icon}</div>
-            <h3 className="font-display text-lg font-semibold text-white">{f.title}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-slate-400">{f.desc}</p>
-          </div>
+      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {all.map((m) => (
+          <MovieCard
+            key={m._id}
+            id={m._id}
+            title={m.title}
+            genres={m.genres ?? []}
+            rating={m.rating}
+            durationMin={m.durationMin}
+            posterUrl={m.posterUrl}
+          />
         ))}
       </section>
     </div>

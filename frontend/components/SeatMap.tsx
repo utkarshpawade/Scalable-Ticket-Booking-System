@@ -3,14 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { SEAT_SOCKET_URL } from '../lib/api';
+import { Mono } from './ui';
 
 export type SeatState = 'AVAILABLE' | 'SELECTED' | 'LOCKED' | 'BOOKED';
 
 export interface Seat {
-  id: string;     // e.g. "A1"
-  row: string;    // "A"
-  col: number;    // 1
+  id: string;
+  row: string;
+  col: number;
   price: number;
+  tier: string;
 }
 
 interface SeatMapProps {
@@ -21,20 +23,31 @@ interface SeatMapProps {
   onSelectionChange?: (selected: Seat[]) => void;
 }
 
-// Default theater layout — 6 rows (A-F) × 10 cols. Back rows cost more (premium).
-const ROWS = ['A', 'B', 'C', 'D', 'E', 'F'];
+// 6 rows × 10 cols, grouped into tiers.
+//   A, B → Standard
+//   C, D → Prime
+//   E    → Premium
+//   F    → Recliner
+const ROW_DEFS: Array<{ row: string; tier: string; price: number }> = [
+  { row: 'A', tier: 'Standard', price: 280 },
+  { row: 'B', tier: 'Standard', price: 280 },
+  { row: 'C', tier: 'Prime',    price: 380 },
+  { row: 'D', tier: 'Prime',    price: 380 },
+  { row: 'E', tier: 'Premium',  price: 480 },
+  { row: 'F', tier: 'Recliner', price: 650 },
+];
 const COLS = Array.from({ length: 10 }, (_, i) => i + 1);
 
 function buildDefaultSeats(): Seat[] {
   const seats: Seat[] = [];
-  for (const row of ROWS) {
-    const premium = row === 'E' || row === 'F';
+  for (const def of ROW_DEFS) {
     for (const col of COLS) {
       seats.push({
-        id: `${row}${col}`,
-        row,
+        id: `${def.row}${col}`,
+        row: def.row,
         col,
-        price: premium ? 350 : 250,
+        price: def.price,
+        tier: def.tier,
       });
     }
   }
@@ -42,7 +55,7 @@ function buildDefaultSeats(): Seat[] {
 }
 
 export default function SeatMap({
-  movieId,
+  movieId: _movieId,
   showtimeId,
   userId = 'user_123',
   socketUrl,
@@ -55,11 +68,8 @@ export default function SeatMap({
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
-  // ---------- Socket wiring ----------
+  // ---------- Socket wiring (unchanged) ----------
   useEffect(() => {
-    // In production each service is deployed separately, so connect directly
-    // to the seat service host. In local dev, falls back to the Nginx gateway
-    // host at http://localhost:8080 which proxies /socket.io to seat-service.
     const url = socketUrl ?? SEAT_SOCKET_URL;
 
     const socket = io(url, {
@@ -70,14 +80,10 @@ export default function SeatMap({
 
     socket.on('connect', () => {
       setConnected(true);
-      // Join the per-showtime room — every lock/release/book event
-      // is broadcast only to members of this room.
       socket.emit('join:showtime', showtimeId);
     });
-
     socket.on('disconnect', () => setConnected(false));
 
-    // ---- Inbound broadcasts ----
     const applyStatus = (ids: string[], state: SeatState) => {
       setStatusMap((prev) => {
         const next = { ...prev };
@@ -89,47 +95,56 @@ export default function SeatMap({
       });
     };
 
-    socket.on('seat_locked', (evt: { showtimeId: string; seatIds: string[]; by?: string }) => {
-      if (evt.showtimeId !== showtimeId) return;
-      // If I locked it myself the local click already marked it SELECTED; only flip
-      // to LOCKED (grey) when another user is the owner.
-      const mine = evt.by && evt.by === userId;
-      applyStatus(evt.seatIds, mine ? 'SELECTED' : 'LOCKED');
-      if (!mine) {
+    socket.on(
+      'seat_locked',
+      (evt: { showtimeId: string; seatIds: string[]; by?: string }) => {
+        if (evt.showtimeId !== showtimeId) return;
+        const mine = evt.by && evt.by === userId;
+        applyStatus(evt.seatIds, mine ? 'SELECTED' : 'LOCKED');
+        if (!mine) {
+          setSelected((prev) => {
+            const next = new Set(prev);
+            evt.seatIds.forEach((id) => next.delete(id));
+            return next;
+          });
+        }
+      },
+    );
+
+    socket.on(
+      'seat_released',
+      (evt: { showtimeId: string; seatIds: string[] }) => {
+        if (evt.showtimeId !== showtimeId) return;
+        applyStatus(evt.seatIds, 'AVAILABLE');
+      },
+    );
+
+    socket.on(
+      'seat_booked',
+      (evt: { showtimeId: string; seatIds: string[] }) => {
+        if (evt.showtimeId !== showtimeId) return;
+        applyStatus(evt.seatIds, 'BOOKED');
         setSelected((prev) => {
           const next = new Set(prev);
           evt.seatIds.forEach((id) => next.delete(id));
           return next;
         });
-      }
-    });
+      },
+    );
 
-    socket.on('seat_released', (evt: { showtimeId: string; seatIds: string[] }) => {
-      if (evt.showtimeId !== showtimeId) return;
-      applyStatus(evt.seatIds, 'AVAILABLE');
-    });
-
-    socket.on('seat_booked', (evt: { showtimeId: string; seatIds: string[] }) => {
-      if (evt.showtimeId !== showtimeId) return;
-      applyStatus(evt.seatIds, 'BOOKED');
-      setSelected((prev) => {
-        const next = new Set(prev);
-        evt.seatIds.forEach((id) => next.delete(id));
-        return next;
-      });
-    });
-
-    // Backwards-compat with the generic broadcast the seat-service emits today.
     socket.on(
       'seat_status_changed',
-      (evt: { showtimeId: string; seatIds: string[]; status: 'LOCKED' | 'AVAILABLE' | 'SOLD' }) => {
+      (evt: {
+        showtimeId: string;
+        seatIds: string[];
+        status: 'LOCKED' | 'AVAILABLE' | 'SOLD';
+      }) => {
         if (evt.showtimeId !== showtimeId) return;
         const map = { LOCKED: 'LOCKED', AVAILABLE: 'AVAILABLE', SOLD: 'BOOKED' } as const;
         applyStatus(evt.seatIds, map[evt.status]);
       },
     );
 
-    // Load initial snapshot.
     (async () => {
       try {
         const res = await fetch(`/api/seats/showtimes/${showtimeId}/seats`);
@@ -138,7 +153,7 @@ export default function SeatMap({
         applyStatus(locked ?? [], 'LOCKED');
         applyStatus(sold ?? [], 'BOOKED');
       } catch {
-        /* initial snapshot is optional — realtime events will still flow */
+        /* optional */
       }
     })();
 
@@ -149,20 +164,14 @@ export default function SeatMap({
     };
   }, [showtimeId, userId, socketUrl]);
 
-  // Bubble selection up so CheckoutPanel can price it.
   useEffect(() => {
     onSelectionChange?.(seats.filter((s) => selected.has(s.id)));
   }, [selected, seats, onSelectionChange]);
 
-  // ---------- Click handler ----------
-  // Selection is purely client-side. The authoritative lock happens in the
-  // booking saga at "Proceed to Payment" — at which point all clients in the
-  // showtime room receive a LOCKED broadcast.
   const toggleSeat = useCallback(
     (seat: Seat) => {
       const s = statusMap[seat.id];
       if (s === 'LOCKED' || s === 'BOOKED') return;
-
       const isSelected = selected.has(seat.id);
 
       setSelected((prev) => {
@@ -171,7 +180,6 @@ export default function SeatMap({
         else next.add(seat.id);
         return next;
       });
-
       setStatusMap((prev) => {
         const next = { ...prev };
         if (isSelected) delete next[seat.id];
@@ -182,118 +190,257 @@ export default function SeatMap({
     [selected, statusMap],
   );
 
-  // ---------- Render ----------
-  const seatClass = (seat: Seat): string => {
-    const base =
-      'flex h-9 w-9 items-center justify-center rounded-md text-xs font-medium transition select-none';
-    const st = statusMap[seat.id];
-    if (st === 'BOOKED')
-      return `${base} bg-red-900/60 text-red-300 cursor-not-allowed line-through`;
-    if (st === 'LOCKED')
-      return `${base} bg-slate-600 text-slate-300 cursor-not-allowed`;
-    if (selected.has(seat.id) || st === 'SELECTED')
-      return `${base} bg-brand-600 text-white ring-2 ring-brand-400 cursor-pointer`;
-    return `${base} bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/40 cursor-pointer`;
-  };
-
-  const rows = useMemo(() => {
-    const grouped: Record<string, Seat[]> = {};
-    for (const s of seats) (grouped[s.row] ??= []).push(s);
-    for (const r of Object.values(grouped)) r.sort((a, b) => a.col - b.col);
-    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+  // Group seats by tier → rows
+  const groups = useMemo(() => {
+    const byTier: Array<{ tier: string; price: number; rows: Array<{ row: string; seats: Seat[] }> }> = [];
+    for (const def of ROW_DEFS) {
+      const rowSeats = seats.filter((s) => s.row === def.row).sort((a, b) => a.col - b.col);
+      const lastGroup = byTier[byTier.length - 1];
+      if (lastGroup && lastGroup.tier === def.tier) {
+        lastGroup.rows.push({ row: def.row, seats: rowSeats });
+      } else {
+        byTier.push({ tier: def.tier, price: def.price, rows: [{ row: def.row, seats: rowSeats }] });
+      }
+    }
+    return byTier;
   }, [seats]);
 
+  const seatStyle = (seat: Seat): React.CSSProperties => {
+    const s = statusMap[seat.id];
+    const isSel = selected.has(seat.id) || s === 'SELECTED';
+    const isLocked = s === 'LOCKED';
+    const isBooked = s === 'BOOKED';
+
+    let bg = 'transparent';
+    let border = '1px solid var(--seat-line, var(--line))';
+    let color = 'var(--fg-soft)';
+    let cursor: React.CSSProperties['cursor'] = 'pointer';
+    let textDecoration: React.CSSProperties['textDecoration'] = 'none';
+
+    if (isBooked) {
+      bg = 'transparent';
+      border = '1px solid transparent';
+      color = 'var(--fg-faint)';
+      cursor = 'not-allowed';
+      textDecoration = 'line-through';
+    } else if (isLocked) {
+      bg = 'var(--seat-locked, var(--line))';
+      border = '1px solid var(--seat-locked, var(--line))';
+      color = 'var(--fg-faint)';
+      cursor = 'not-allowed';
+    } else if (isSel) {
+      bg = 'var(--accent)';
+      border = '1px solid var(--accent)';
+      color = 'var(--bg)';
+    }
+
+    return {
+      width: 32,
+      height: 32,
+      borderRadius: '4px 4px 2px 2px',
+      background: bg,
+      border,
+      color,
+      cursor,
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: 9,
+      fontWeight: 500,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'background 0.15s',
+      textDecoration,
+      padding: 0,
+    };
+  };
+
+  const soldCount = Object.values(statusMap).filter((v) => v === 'BOOKED').length;
+  const heldCount = Object.values(statusMap).filter((v) => v === 'LOCKED').length;
+
   return (
-    <div className="flex flex-col items-center gap-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-      {/* Connection indicator */}
-      <div className="flex w-full items-center justify-between text-xs">
-        <span className="text-slate-400">Showtime: {showtimeId}</span>
-        <span
-          className={`flex items-center gap-1.5 ${
-            connected ? 'text-emerald-400' : 'text-amber-400'
-          }`}
-        >
+    <div
+      className="rounded-sharp"
+      style={{
+        border: '1px solid var(--line)',
+        background: 'var(--card)',
+        padding: '32px 28px',
+      }}
+    >
+      {/* Live indicator */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full ${
-              connected ? 'bg-emerald-400' : 'bg-amber-400'
-            }`}
+            className={connected ? 'animate-pulse-dot' : ''}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: connected ? 'var(--accent)' : 'var(--fg-faint)',
+            }}
           />
-          {connected ? 'Live' : 'Connecting…'}
-        </span>
+          <Mono
+            className="text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: 'var(--fg-soft)' }}
+          >
+            {connected ? 'Live · synced with seat-service' : 'Connecting…'}
+          </Mono>
+        </div>
+        <Mono
+          className="text-[10px] uppercase tracking-[0.2em]"
+          style={{ color: 'var(--fg-faint)' }}
+        >
+          {soldCount} sold · {heldCount} held
+        </Mono>
       </div>
 
       {/* Screen */}
-      <div className="w-full">
+      <div className="mb-8">
         <div
-          className="mx-auto h-2 w-3/4 rounded-t-[50%] bg-gradient-to-b from-slate-200 to-slate-600 shadow-[0_0_40px_10px_rgba(226,232,240,0.25)]"
-          aria-hidden
+          className="mx-auto h-1"
+          style={{
+            width: '70%',
+            background:
+              'linear-gradient(90deg, transparent, var(--accent), transparent)',
+            borderRadius: 999,
+            boxShadow:
+              '0 0 40px 6px color-mix(in oklch, var(--accent) 30%, transparent)',
+          }}
         />
-        <p className="mt-2 text-center text-xs uppercase tracking-[0.3em] text-slate-400">
-          Screen
-        </p>
+        <Mono
+          className="mt-3 block text-center text-[9px] tracking-[0.4em]"
+          style={{ color: 'var(--fg-faint)' }}
+        >
+          SCREEN
+        </Mono>
       </div>
 
-      {/* Seat grid */}
-      <div className="flex flex-col gap-2">
-        {rows.map(([row, rowSeats]) => (
-          <div key={row} className="flex items-center gap-2">
-            <span className="w-5 text-center text-xs font-semibold text-slate-400">
-              {row}
-            </span>
-            <div className="flex gap-1.5">
-              {rowSeats.slice(0, 5).map((seat) => (
-                <button
-                  key={seat.id}
-                  onClick={() => toggleSeat(seat)}
-                  className={seatClass(seat)}
-                  disabled={
-                    statusMap[seat.id] === 'LOCKED' ||
-                    statusMap[seat.id] === 'BOOKED'
-                  }
-                  aria-label={`Seat ${seat.id}`}
-                >
-                  {seat.col}
-                </button>
-              ))}
-              {/* Aisle */}
-              <div className="w-4" aria-hidden />
-              {rowSeats.slice(5).map((seat) => (
-                <button
-                  key={seat.id}
-                  onClick={() => toggleSeat(seat)}
-                  className={seatClass(seat)}
-                  disabled={
-                    statusMap[seat.id] === 'LOCKED' ||
-                    statusMap[seat.id] === 'BOOKED'
-                  }
-                  aria-label={`Seat ${seat.id}`}
-                >
-                  {seat.col}
-                </button>
-              ))}
-            </div>
-            <span className="w-5 text-center text-xs font-semibold text-slate-400">
-              {row}
-            </span>
+      {/* Tier groups */}
+      {groups.map((g, gi) => (
+        <div
+          key={g.tier}
+          style={{ marginBottom: gi === groups.length - 1 ? 0 : 24 }}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <Mono
+              className="text-[9px] uppercase tracking-[0.25em]"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              {g.tier}
+            </Mono>
+            <Mono
+              className="text-[9px] uppercase tracking-[0.25em]"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              ₹{g.price}
+            </Mono>
           </div>
-        ))}
-      </div>
+          <div className="flex flex-col items-center gap-1.5">
+            {g.rows.map((r) => (
+              <div key={r.row} className="flex items-center gap-1.5">
+                <Mono
+                  style={{
+                    width: 16,
+                    fontSize: 10,
+                    color: 'var(--fg-faint)',
+                    textAlign: 'center',
+                  }}
+                >
+                  {r.row}
+                </Mono>
+                <div className="flex gap-1.5">
+                  {r.seats.slice(0, 5).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleSeat(s)}
+                      style={seatStyle(s)}
+                      disabled={
+                        statusMap[s.id] === 'LOCKED' ||
+                        statusMap[s.id] === 'BOOKED'
+                      }
+                      aria-label={`Seat ${s.id}`}
+                    >
+                      {s.col}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ width: 16 }} />
+                <div className="flex gap-1.5">
+                  {r.seats.slice(5).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleSeat(s)}
+                      style={seatStyle(s)}
+                      disabled={
+                        statusMap[s.id] === 'LOCKED' ||
+                        statusMap[s.id] === 'BOOKED'
+                      }
+                      aria-label={`Seat ${s.id}`}
+                    >
+                      {s.col}
+                    </button>
+                  ))}
+                </div>
+                <Mono
+                  style={{
+                    width: 16,
+                    fontSize: 10,
+                    color: 'var(--fg-faint)',
+                    textAlign: 'center',
+                  }}
+                >
+                  {r.row}
+                </Mono>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300">
-        <span className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded-sm bg-emerald-500/20 ring-1 ring-emerald-400/40" />
-          Available
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded-sm bg-brand-600" /> Selected
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded-sm bg-slate-600" /> Locked
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-4 w-4 rounded-sm bg-red-900/60" /> Booked
-        </span>
+      <div
+        className="mt-8 flex flex-wrap items-center justify-center gap-5 pt-6"
+        style={{ borderTop: '1px solid var(--line)' }}
+      >
+        {[
+          {
+            label: 'Available',
+            style: {
+              border: '1px solid var(--seat-line, var(--line))',
+              background: 'transparent',
+            } as React.CSSProperties,
+          },
+          {
+            label: 'Selected',
+            style: { background: 'var(--accent)' } as React.CSSProperties,
+          },
+          {
+            label: 'Held',
+            style: {
+              background: 'var(--seat-locked, var(--line))',
+            } as React.CSSProperties,
+          },
+          {
+            label: 'Sold',
+            style: { border: '1px dashed var(--line)' } as React.CSSProperties,
+          },
+        ].map((l) => (
+          <div key={l.label} className="flex items-center gap-2">
+            <span
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: 3,
+                ...l.style,
+              }}
+            />
+            <Mono
+              className="text-[10px] uppercase tracking-[0.15em]"
+              style={{ color: 'var(--fg-soft)' }}
+            >
+              {l.label}
+            </Mono>
+          </div>
+        ))}
       </div>
     </div>
   );

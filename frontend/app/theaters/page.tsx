@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { Mono, Pill, Tag } from '@/components/ui';
 import { MOCK_THEATERS } from '@/lib/mockData';
 
 export default function TheatersPage() {
@@ -26,13 +28,24 @@ export default function TheatersPage() {
 
   return (
     <div className="space-y-10">
-      <header className="space-y-3">
-        <h1 className="font-display text-4xl font-bold text-white md:text-5xl">
-          Our <span className="gradient-text">Theaters</span>
+      <header className="space-y-2">
+        <Mono
+          className="text-[10px] uppercase tracking-[0.3em]"
+          style={{ color: 'var(--fg-faint)' }}
+        >
+          Premium screens · IMAX · Dolby · 4DX
+        </Mono>
+        <h1
+          className="font-display italic font-bold"
+          style={{
+            fontSize: 'clamp(40px, 5vw, 64px)',
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            color: 'var(--fg)',
+          }}
+        >
+          Theaters
         </h1>
-        <p className="text-slate-400">
-          Premium screens across major cities — IMAX, 4DX, Dolby Atmos, and more.
-        </p>
       </header>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -41,75 +54,97 @@ export default function TheatersPage() {
           placeholder="Search theaters or addresses…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 md:max-w-sm"
+          className="w-full rounded-sharp border px-3 py-2.5 font-mono text-sm outline-none md:max-w-sm"
+          style={{
+            borderColor: 'var(--line)',
+            background: 'transparent',
+            color: 'var(--fg)',
+          }}
         />
         <div className="flex flex-wrap gap-2">
           {cities.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCity(c)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                c === city
-                  ? 'bg-gradient-to-r from-brand-600 to-purple-600 text-white shadow-lg shadow-brand-500/25'
-                  : 'border border-white/10 bg-white/5 text-slate-300 hover:border-white/30 hover:bg-white/10 hover:text-white'
-              }`}
-            >
+            <Pill key={c} active={c === city} onClick={() => setCity(c)}>
               {c}
-            </button>
+            </Pill>
           ))}
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/5 bg-white/5 p-16 text-center text-slate-400">
+        <div
+          className="rounded-sharp p-16 text-center font-mono text-sm"
+          style={{ border: '1px solid var(--line)', color: 'var(--fg-faint)' }}
+        >
           No theaters match your filters.
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((t, i) => (
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((t) => (
             <div
               key={t.id}
-              className="fade-up group overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-slate-900/80 to-slate-900/40 shadow-lg shadow-black/40 transition hover:-translate-y-1 hover:border-white/15 hover:shadow-2xl hover:shadow-brand-500/10"
-              style={{ animationDelay: `${i * 60}ms` }}
+              className="overflow-hidden rounded-sharp"
+              style={{
+                border: '1px solid var(--line)',
+                background: 'var(--card)',
+              }}
             >
-              <div className="relative aspect-[16/9] overflow-hidden bg-slate-800">
+              <div
+                className="relative aspect-[16/9]"
+                style={{ background: 'var(--bg-soft)' }}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={t.imageUrl}
                   alt={t.name}
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                  className="h-full w-full object-cover opacity-80"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent opacity-80" />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'linear-gradient(180deg, transparent 40%, var(--card) 100%)',
+                  }}
+                />
                 <div className="absolute bottom-3 left-4 right-4">
-                  <p className="text-xs uppercase tracking-widest text-brand-300">
+                  <Mono
+                    className="text-[10px] uppercase tracking-[0.3em]"
+                    style={{ color: 'var(--accent)' }}
+                  >
                     {t.city}
-                  </p>
-                  <h3 className="mt-0.5 font-display text-xl font-bold text-white">
+                  </Mono>
+                  <h3
+                    className="mt-1 font-display italic font-bold"
+                    style={{ fontSize: 22, color: 'white' }}
+                  >
                     {t.name}
                   </h3>
                 </div>
               </div>
               <div className="space-y-3 p-5">
-                <p className="text-sm text-slate-400">{t.address}</p>
-                <div className="flex items-center gap-3 text-xs text-slate-300">
-                  <span>🎬 {t.screens} screens</span>
-                </div>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: 'var(--fg-soft)' }}
+                >
+                  {t.address}
+                </p>
+                <Mono
+                  className="block text-xs"
+                  style={{ color: 'var(--fg-soft)' }}
+                >
+                  {t.screens} screens
+                </Mono>
                 <div className="flex flex-wrap gap-1.5">
                   {t.amenities.map((a) => (
-                    <span
-                      key={a}
-                      className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-300"
-                    >
-                      {a}
-                    </span>
+                    <Tag key={a}>{a}</Tag>
                   ))}
                 </div>
-                <a
+                <Link
                   href="/movies"
-                  className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-brand-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:brightness-110"
+                  className="mt-3 block rounded-sharp px-4 py-2.5 text-center font-mono text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-90"
+                  style={{ background: 'var(--accent)', color: 'var(--bg)' }}
                 >
                   View showtimes →
-                </a>
+                </Link>
               </div>
             </div>
           ))}

@@ -2,7 +2,32 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Mono, Poster } from '@/components/ui';
 import { getBooking, type LocalBooking } from '@/lib/localStore';
+
+function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <Mono
+        className="block text-[10px] uppercase tracking-[0.2em]"
+        style={{ color: 'var(--fg-faint)' }}
+      >
+        {label}
+      </Mono>
+      <div
+        className="mt-1"
+        style={{
+          fontFamily: mono ? '"JetBrains Mono", monospace' : 'inherit',
+          fontSize: 14,
+          color: 'var(--fg)',
+          fontWeight: mono ? 500 : 400,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
 
 export default function BookingDetailPage({ params }: { params: { id: string } }) {
   const [booking, setBooking] = useState<LocalBooking | null | undefined>(undefined);
@@ -17,24 +42,45 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
   if (booking === undefined) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-600 border-t-brand-500" />
+        <span
+          className="h-8 w-8 animate-spin rounded-full border-2"
+          style={{
+            borderColor: 'var(--line)',
+            borderTopColor: 'var(--accent)',
+          }}
+        />
       </div>
     );
   }
 
   if (booking === null) {
     return (
-      <div className="rounded-2xl border border-white/5 bg-white/5 p-16 text-center">
-        <div className="mb-4 text-5xl">🤔</div>
-        <h3 className="font-display text-xl font-semibold text-white">
-          Booking not found
+      <div
+        className="rounded-sharp p-16 text-center"
+        style={{ border: '1px solid var(--line)', background: 'var(--card)' }}
+      >
+        <Mono
+          className="mb-3 block text-[10px] uppercase tracking-[0.3em]"
+          style={{ color: 'var(--accent)' }}
+        >
+          Not found
+        </Mono>
+        <h3
+          className="font-display italic font-bold"
+          style={{ fontSize: 32, color: 'var(--fg)' }}
+        >
+          We can&apos;t locate that booking.
         </h3>
-        <p className="mt-2 text-sm text-slate-400">
-          We couldn&apos;t find booking <code>{params.id}</code> in your account.
-        </p>
+        <Mono
+          className="mt-2 block text-xs"
+          style={{ color: 'var(--fg-soft)' }}
+        >
+          {params.id}
+        </Mono>
         <Link
           href="/bookings"
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:brightness-110"
+          className="mt-6 inline-flex rounded-sharp px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.15em]"
+          style={{ background: 'var(--accent)', color: 'var(--bg)' }}
         >
           Back to my bookings
         </Link>
@@ -45,106 +91,224 @@ export default function BookingDetailPage({ params }: { params: { id: string } }
   const isConfirmed = booking.status === 'CONFIRMED';
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <nav className="text-sm text-slate-400">
-        <Link href="/bookings" className="hover:text-white">My Bookings</Link>
-        <span className="mx-2">/</span>
-        <span className="text-slate-200">{booking.bookingId}</span>
-      </nav>
-
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-900/40 shadow-2xl">
+    <div className="space-y-10 screen-enter">
+      <div className="text-center">
         <div
-          className={`px-8 py-6 text-center ${
-            isConfirmed
-              ? 'bg-gradient-to-r from-emerald-600/30 via-emerald-500/20 to-emerald-700/30'
-              : 'bg-gradient-to-r from-amber-600/30 via-amber-500/20 to-amber-700/30'
-          }`}
+          className="mx-auto mb-6 flex items-center justify-center"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background:
+              'color-mix(in oklch, var(--accent) 15%, transparent)',
+            color: 'var(--accent)',
+            border: '1px solid var(--accent)',
+            fontSize: 28,
+          }}
         >
-          <div className="text-5xl">{isConfirmed ? '✅' : '⏳'}</div>
-          <h1 className="mt-3 font-display text-3xl font-bold text-white">
-            {isConfirmed ? 'Booking confirmed' : 'Awaiting payment'}
-          </h1>
-          <p className="mt-1 text-sm text-slate-200">
-            {isConfirmed
-              ? 'See you at the movies — show this ticket at the entrance.'
-              : 'Finish payment to lock in your seats.'}
-          </p>
+          {isConfirmed ? '✓' : '◷'}
         </div>
+        <Mono
+          className="mb-3 block text-[10px] uppercase tracking-[0.3em]"
+          style={{ color: 'var(--accent)' }}
+        >
+          {isConfirmed ? 'Booking confirmed' : 'Awaiting payment'}
+        </Mono>
+        <h1
+          className="font-display italic font-bold"
+          style={{ fontSize: 56, lineHeight: 1, color: 'var(--fg)' }}
+        >
+          {isConfirmed
+            ? 'See you at the screen.'
+            : 'Finish payment to lock your seats.'}
+        </h1>
+        <Mono
+          className="mt-3 block text-xs"
+          style={{ color: 'var(--fg-soft)' }}
+        >
+          Booking ID · {booking.bookingId}
+        </Mono>
+      </div>
 
-        <div className="space-y-5 p-8">
-          <div className="flex items-start gap-4">
-            {booking.posterUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={booking.posterUrl} alt="" className="h-28 w-20 rounded-lg object-cover" />
-            ) : (
-              <div className="flex h-28 w-20 items-center justify-center rounded-lg bg-slate-800 text-3xl">🎞️</div>
-            )}
+      {/* Ticket */}
+      <div
+        className="relative mx-auto"
+        style={{
+          maxWidth: 720,
+          border: '1px solid var(--line)',
+          background: 'var(--card)',
+          borderRadius: 2,
+        }}
+      >
+        {/* Perforated divider */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: '70%',
+            height: 0,
+            borderTop: '1px dashed var(--line)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: -8,
+            top: 'calc(70% - 8px)',
+            width: 16,
+            height: 16,
+            borderRadius: '50%',
+            background: 'var(--bg)',
+            border: '1px solid var(--line)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            right: -8,
+            top: 'calc(70% - 8px)',
+            width: 16,
+            height: 16,
+            borderRadius: '50%',
+            background: 'var(--bg)',
+            border: '1px solid var(--line)',
+          }}
+        />
+
+        <div
+          className="grid gap-6 p-8"
+          style={{ gridTemplateColumns: '120px 1fr' }}
+        >
+          <div
+            className="overflow-hidden rounded-sharp"
+            style={{ aspectRatio: '2/3' }}
+          >
+            <Poster
+              movie={{
+                id: booking.movieId ?? booking.bookingId,
+                title: booking.movieTitle ?? 'Movie',
+                genres: [],
+                posterUrl: booking.posterUrl,
+              }}
+              className="h-full w-full"
+            />
+          </div>
+          <div className="flex flex-col justify-between">
             <div>
-              <h2 className="font-display text-xl font-semibold text-white">
+              <h2
+                className="font-display italic font-bold"
+                style={{ fontSize: 36, color: 'var(--fg)', lineHeight: 0.95 }}
+              >
                 {booking.movieTitle ?? 'Movie'}
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Showtime <span className="text-slate-200">{booking.showtimeId}</span>
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Booked {new Date(booking.createdAt).toLocaleString()}
-              </p>
+              <Mono
+                className="mt-2 block text-[10px] uppercase tracking-[0.2em]"
+                style={{ color: 'var(--fg-soft)' }}
+              >
+                Booked · {new Date(booking.createdAt).toLocaleDateString()}
+              </Mono>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-400">Booking ID</p>
-              <p className="mt-1 font-mono text-sm text-white">{booking.bookingId}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-400">Total paid</p>
-              <p className="mt-1 font-display text-lg font-bold text-white">
-                ${booking.amount.toFixed(2)}
-              </p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-xs uppercase tracking-wider text-slate-400">Seats</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {booking.seatIds.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full border border-brand-500/40 bg-brand-600/20 px-3 py-1 text-sm font-semibold text-brand-100"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {isConfirmed ? (
-            <div className="flex justify-center rounded-xl border border-white/10 bg-white/5 p-6">
-              <div
-                className="h-32 w-32 bg-white"
-                style={{
-                  background:
-                    'repeating-linear-gradient(0deg, #fff, #fff 4px, #000 4px, #000 8px), repeating-linear-gradient(90deg, transparent, transparent 6px, #fff 6px, #fff 10px)',
-                  backgroundBlendMode: 'multiply',
-                }}
-                aria-label="QR code"
+            <div className="grid grid-cols-3 gap-4">
+              <Field label="Showtime" value={booking.showtimeId.slice(-8)} mono />
+              <Field label="Screen" value="Screen 4" />
+              <Field
+                label="Booked"
+                value={new Date(booking.createdAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+                mono
               />
             </div>
-          ) : (
-            <Link
-              href={`/payment/${booking.bookingId}`}
-              className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:brightness-110"
-            >
-              Continue to payment →
-            </Link>
-          )}
+          </div>
+        </div>
+
+        <div
+          className="grid gap-6 px-8 pb-8 pt-6"
+          style={{ gridTemplateColumns: '1fr auto' }}
+        >
+          <div className="grid grid-cols-3 gap-6">
+            <Field
+              label="Seats"
+              value={booking.seatIds.join(', ')}
+              mono
+            />
+            <Field label="Status" value={isConfirmed ? 'Confirmed' : 'Pending'} />
+            <Field
+              label="Total paid"
+              value={`₹${booking.amount.toLocaleString('en-IN')}`}
+              mono
+            />
+          </div>
+          {/* Faux QR */}
+          <div
+            className="relative"
+            style={{
+              width: 96,
+              height: 96,
+              background: `repeating-linear-gradient(0deg, var(--fg) 0 4px, transparent 4px 7px),
+                           repeating-linear-gradient(90deg, var(--fg) 0 4px, transparent 4px 7px)`,
+              border: '1px solid var(--line)',
+              borderRadius: 2,
+              opacity: 0.85,
+            }}
+          >
+            <div
+              style={{ position: 'absolute', inset: 12, background: 'var(--card)' }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: 6,
+                left: 6,
+                width: 14,
+                height: 14,
+                border: '3px solid var(--fg)',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: 6,
+                right: 6,
+                width: 14,
+                height: 14,
+                border: '3px solid var(--fg)',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 6,
+                left: 6,
+                width: 14,
+                height: 14,
+                border: '3px solid var(--fg)',
+              }}
+            />
+          </div>
         </div>
       </div>
 
       <div className="text-center">
-        <Link href="/movies" className="text-sm text-slate-400 hover:text-white">
-          Book another movie →
-        </Link>
+        {isConfirmed ? (
+          <Link
+            href="/movies"
+            className="inline-flex rounded-sharp border px-6 py-3 font-mono text-[11px] uppercase tracking-[0.15em]"
+            style={{ borderColor: 'var(--line)', color: 'var(--fg)' }}
+          >
+            Book another →
+          </Link>
+        ) : (
+          <Link
+            href={`/payment/${booking.bookingId}`}
+            className="inline-flex rounded-sharp px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.15em]"
+            style={{ background: 'var(--accent)', color: 'var(--bg)' }}
+          >
+            Continue to payment →
+          </Link>
+        )}
       </div>
     </div>
   );

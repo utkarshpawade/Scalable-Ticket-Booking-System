@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { Mono } from '@/components/ui';
 import { setUser, setAuthToken } from '@/lib/localStore';
 import { signIn } from '@/lib/api';
 
@@ -42,20 +43,43 @@ function SignInForm() {
   };
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/80 to-slate-900/40 p-8 shadow-2xl">
-        <h1 className="font-display text-3xl font-bold text-white">
-          Welcome <span className="gradient-text">back</span>
+    <div className="mx-auto max-w-md screen-enter">
+      <div
+        className="rounded-sharp p-8"
+        style={{ border: '1px solid var(--line)', background: 'var(--card)' }}
+      >
+        <Mono
+          className="mb-3 block text-[10px] uppercase tracking-[0.3em]"
+          style={{ color: 'var(--accent)' }}
+        >
+          Welcome back
+        </Mono>
+        <h1
+          className="font-display italic font-bold"
+          style={{
+            fontSize: 'clamp(36px, 4vw, 48px)',
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            color: 'var(--fg)',
+          }}
+        >
+          Sign in
         </h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <p
+          className="mt-3 text-sm leading-relaxed"
+          style={{ color: 'var(--fg-soft)' }}
+        >
           Sign in to view your bookings and pick up where you left off.
         </p>
 
         <form onSubmit={submit} className="mt-7 space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <Mono
+              className="mb-1.5 block text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: 'var(--fg-faint)' }}
+            >
               Email
-            </label>
+            </Mono>
             <input
               type="email"
               value={email}
@@ -63,13 +87,21 @@ function SignInForm() {
               autoComplete="email"
               required
               placeholder="you@example.com"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500"
+              className="w-full rounded-sharp border px-3 py-2.5 font-mono text-sm outline-none"
+              style={{
+                borderColor: 'var(--line)',
+                background: 'transparent',
+                color: 'var(--fg)',
+              }}
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <Mono
+              className="mb-1.5 block text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: 'var(--fg-faint)' }}
+            >
               Password
-            </label>
+            </Mono>
             <input
               type="password"
               value={password}
@@ -77,12 +109,25 @@ function SignInForm() {
               autoComplete="current-password"
               required
               placeholder="••••••••"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500"
+              className="w-full rounded-sharp border px-3 py-2.5 font-mono text-sm outline-none"
+              style={{
+                borderColor: 'var(--line)',
+                background: 'transparent',
+                color: 'var(--fg)',
+              }}
             />
           </div>
 
           {error && (
-            <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            <div
+              className="rounded-sharp px-3 py-2 font-mono text-[11px]"
+              style={{
+                border: '1px solid oklch(0.65 0.18 25)',
+                color: 'oklch(0.85 0.15 25)',
+                background:
+                  'color-mix(in oklch, oklch(0.65 0.18 25) 8%, transparent)',
+              }}
+            >
               {error}
             </div>
           )}
@@ -90,19 +135,32 @@ function SignInForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+            className="flex w-full items-center justify-center rounded-sharp px-4 py-3.5 font-mono text-xs font-semibold uppercase tracking-[0.15em] disabled:cursor-not-allowed disabled:opacity-70"
+            style={{ background: 'var(--accent)', color: 'var(--bg)' }}
           >
             {loading ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              <span
+                className="h-4 w-4 animate-spin rounded-full border-2"
+                style={{
+                  borderColor: 'color-mix(in oklch, var(--bg) 40%, transparent)',
+                  borderTopColor: 'var(--bg)',
+                }}
+              />
             ) : (
-              'Sign in'
+              'Sign in →'
             )}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-400">
+        <p
+          className="mt-6 text-center font-mono text-[11px]"
+          style={{ color: 'var(--fg-soft)' }}
+        >
           Don&apos;t have an account?{' '}
-          <Link href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`} className="text-brand-300 hover:text-brand-200">
+          <Link
+            href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
+            style={{ color: 'var(--accent)' }}
+          >
             Create one
           </Link>
         </p>

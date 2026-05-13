@@ -1,12 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import NavAuth from '@/components/NavAuth';
+import TopMarquee from '@/components/TopMarquee';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CineBook — Real-time Movie Ticket Booking',
+  title: 'Reel Room — Ticket Booking',
   description: 'Pick seats live. Pay securely. Zero double-bookings.',
 };
+
+const NAV_LINKS = [
+  { href: '/movies',   label: 'Films' },
+  { href: '/theaters', label: 'Theaters' },
+  { href: '/bookings', label: 'Bookings' },
+];
 
 export default function RootLayout({
   children,
@@ -15,77 +22,77 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">
-        {/* ---------- Navigation ---------- */}
-        <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-950/70 backdrop-blur-xl">
-          <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-            <Link href="/" className="group flex items-center gap-2.5">
-              <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 via-purple-500 to-pink-500 text-lg shadow-lg shadow-brand-500/30 transition group-hover:scale-110 group-hover:rotate-3">
-                <span className="text-white">🎬</span>
-                <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500 to-purple-500 opacity-0 blur-md transition group-hover:opacity-60" />
-              </span>
-              <span className="font-display text-xl font-bold tracking-tight text-white">
-                Cine<span className="gradient-text">Book</span>
-              </span>
-            </Link>
+      <body data-theme="dark">
+        <TopMarquee />
 
-            <div className="hidden items-center gap-8 md:flex">
-              {[
-                { href: '/',         label: 'Home' },
-                { href: '/movies',   label: 'Movies' },
-                { href: '/theaters', label: 'Theaters' },
-                { href: '/bookings', label: 'My Bookings' },
-              ].map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="relative text-sm font-medium text-slate-300 transition hover:text-white"
-                >
-                  {l.label}
-                  <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-gradient-to-r from-brand-400 to-purple-400 transition-all hover:w-full" />
-                </Link>
-              ))}
-            </div>
+        {/* ---------- Nav ---------- */}
+        <header
+          className="flex items-center justify-between px-6 py-5"
+          style={{ borderBottom: '1px solid var(--line)' }}
+        >
+          <Link href="/" className="flex items-baseline gap-3">
+            <span
+              className="font-display italic font-bold"
+              style={{ fontSize: 26, color: 'var(--fg)', letterSpacing: '-0.02em' }}
+            >
+              Reel Room
+            </span>
+            <span
+              className="hidden font-mono text-[10px] uppercase tracking-[0.3em] sm:inline"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              est. 2026
+            </span>
+          </Link>
 
-            <NavAuth />
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.15em] transition-colors"
+                style={{
+                  color: 'var(--fg-soft)',
+                  borderBottom: '1px solid transparent',
+                }}
+              >
+                {l.label}
+              </Link>
+            ))}
           </nav>
+
+          <NavAuth />
         </header>
 
         {/* ---------- Main ---------- */}
-        <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+        <main
+          className="mx-auto px-6 pb-20 pt-12"
+          style={{ maxWidth: 1280 }}
+        >
+          {children}
+        </main>
 
         {/* ---------- Footer ---------- */}
-        <footer className="mt-20 border-t border-white/5">
-          <div className="mx-auto grid max-w-7xl gap-10 px-6 py-12 md:grid-cols-4">
-            <div>
-              <div className="font-display text-lg font-bold text-white">
-                Cine<span className="gradient-text">Book</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-400">
-                Real-time seat selection, powered by a distributed saga and Redis Redlock.
-              </p>
-            </div>
-            {[
-              { t: 'Product',  items: ['Movies', 'Theaters', 'Gift Cards', 'Promotions'] },
-              { t: 'Company',  items: ['About', 'Careers', 'Press', 'Contact'] },
-              { t: 'Legal',    items: ['Privacy', 'Terms', 'Refunds', 'Cookies'] },
-            ].map((col) => (
-              <div key={col.t}>
-                <h4 className="text-sm font-semibold text-white">{col.t}</h4>
-                <ul className="mt-3 space-y-2 text-sm text-slate-400">
-                  {col.items.map((i) => (
-                    <li key={i}>
-                      <Link href="#" className="hover:text-white">
-                        {i}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-white/5 py-5 text-center text-xs text-slate-500">
-            © {new Date().getFullYear()} CineBook · Built on a scalable microservices architecture
+        <footer
+          className="mt-12 px-6 py-8"
+          style={{ borderTop: '1px solid var(--line)' }}
+        >
+          <div
+            className="mx-auto flex items-center justify-between gap-4"
+            style={{ maxWidth: 1280 }}
+          >
+            <span
+              className="font-mono text-[10px] uppercase tracking-[0.3em]"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              Reel Room · A scalable booking platform
+            </span>
+            <span
+              className="hidden font-mono text-[10px] uppercase tracking-[0.3em] sm:inline"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              Saga · Redlock · Socket.io
+            </span>
           </div>
         </footer>
       </body>

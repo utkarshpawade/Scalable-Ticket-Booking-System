@@ -23,18 +23,20 @@ export default function NavAuth() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Link
           href="/signin"
-          className="hidden rounded-lg border border-slate-700/70 bg-slate-900/50 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 sm:block"
+          className="hidden px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.15em] sm:inline-block"
+          style={{ color: 'var(--fg-soft)' }}
         >
-          Sign In
+          Sign in
         </Link>
         <Link
           href="/signup"
-          className="relative rounded-lg bg-gradient-to-r from-brand-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:shadow-brand-500/50 hover:brightness-110"
+          className="rounded-sharp px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-90"
+          style={{ background: 'var(--accent)', color: 'var(--bg)' }}
         >
-          Get Started
+          Get started
         </Link>
       </div>
     );
@@ -46,30 +48,52 @@ export default function NavAuth() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-lg border border-slate-700/70 bg-slate-900/50 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+        className="flex items-center gap-2 rounded-sharp border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.15em] transition-colors"
+        style={{
+          borderColor: 'var(--line)',
+          color: 'var(--fg-soft)',
+          background: 'transparent',
+        }}
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-purple-500 text-xs font-bold text-white">
+        <span
+          className="flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-semibold"
+          style={{ background: 'var(--accent)', color: 'var(--bg)' }}
+        >
           {initial}
         </span>
-        <span className="hidden max-w-[120px] truncate sm:block">{user.name || user.email}</span>
-        <span className="text-slate-400">▾</span>
+        <span className="hidden max-w-[120px] truncate sm:block">
+          {user.name || user.email}
+        </span>
+        <span style={{ color: 'var(--fg-faint)' }}>▾</span>
       </button>
 
       {open && (
         <div
           onMouseLeave={() => setOpen(false)}
-          className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-2xl backdrop-blur"
+          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-sharp border shadow-2xl"
+          style={{
+            borderColor: 'var(--line)',
+            background: 'var(--card)',
+          }}
         >
-          <div className="border-b border-white/5 px-4 py-3">
-            <p className="text-sm font-semibold text-white">{user.name || 'Account'}</p>
-            <p className="truncate text-xs text-slate-400">{user.email}</p>
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
+            <p className="text-sm" style={{ color: 'var(--fg)' }}>
+              {user.name || 'Account'}
+            </p>
+            <p
+              className="mt-0.5 truncate font-mono text-[11px]"
+              style={{ color: 'var(--fg-faint)' }}
+            >
+              {user.email}
+            </p>
           </div>
           <Link
             href="/bookings"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-slate-200 hover:bg-white/5"
+            className="block px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.15em] transition-colors hover:opacity-80"
+            style={{ color: 'var(--fg-soft)' }}
           >
-            My Bookings
+            My bookings
           </Link>
           <button
             onClick={() => {
@@ -77,7 +101,11 @@ export default function NavAuth() {
               setOpen(false);
               router.push('/');
             }}
-            className="block w-full border-t border-white/5 px-4 py-2.5 text-left text-sm text-rose-300 hover:bg-rose-500/10"
+            className="block w-full px-4 py-2.5 text-left font-mono text-[11px] uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
+            style={{
+              borderTop: '1px solid var(--line)',
+              color: 'var(--accent)',
+            }}
           >
             Sign out
           </button>
